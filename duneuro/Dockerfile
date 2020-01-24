@@ -56,6 +56,8 @@ RUN cp /duneuro/dune-uggrid/low/*.h /duneuro/dune-uggrid/ug/ \
     && cp /duneuro/dune-uggrid/gm/evm.* /duneuro/dune-uggrid/ug/ \
     && cp /duneuro/dune-uggrid/gm/dlmgr.* /duneuro/dune-uggrid/ug/ 
 
+RUN sed -i 's/^.*#define NDELEM_BLKS_MAX\s*100.*$/#define NDELEM_BLKS_MAX                 1111/' /duneuro/dune-uggrid/gm/gm.h \
+    && sed -i 's/^.*#define NDELEM_BLKS_MAX\s*100.*$/#define NDELEM_BLKS_MAX                 1111/' /duneuro/dune-uggrid/ug/gm.h
 
 RUN MAKE_FLAGS="-j2" \
     && for i in common geometry localfunctions grid istl typetree uggrid functions pdelab ; do \
@@ -101,6 +103,7 @@ RUN echo 'CMAKE_FLAGS="\
 					-DCMAKE_C_COMPILER=gcc \ 
           " MAKE_FLAGS="-j2"' > /duneuro/dune-common/config_release.opts \
     && /duneuro/dune-common/bin/dunecontrol --opts=/duneuro/dune-common/config_release.opts --builddir=/duneuro/build-release all
+
 
 
 ENV PYTHONPATH "${PYTHONPATH}:/duneuro/build-release/duneuro-py/src/"
