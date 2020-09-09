@@ -33,6 +33,10 @@ RUN GIT_URL="https://github.com/openmeeg/openmeeg/archive/30b8ee5322863b56f12ce7
     && mv /openmeeg-30b8ee5322863b56f12ce790c8a04852a4594be0 /openmeeg \
     && rm ./30b8ee5322863b56f12ce790c8a04852a4594be0.zip 
 
+# Correct c++ runtime error (applies only to 30b8ee5322863b56f12ce790c8a04852a4594be0)
+RUN sed -i '/transmat.set(0.0);/c\        for (int i=0; i<geo.size(); i++)  {for (int j=0; j<geo.size(); j++) {transmat(i,j) = 0.0;}}' /openmeeg/OpenMEEG/src/assembleSourceMat.cpp
+
+
 RUN cd /openmeeg \
     && mkdir build \
     && cd build \
