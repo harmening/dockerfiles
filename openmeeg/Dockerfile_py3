@@ -1,0 +1,36 @@
+FROM ubuntu:20.04
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends apt-utils \
+        build-essential \
+        sudo \
+        gcc \
+        g++ \
+        libopenblas-dev \
+        liblapacke-dev \
+        libhdf5-serial-dev \
+        libmatio-dev \
+    && apt-get install -y make \
+        -y cmake \
+        -y python3-dev \
+        -y python3-numpy \
+        swig \
+        git \
+    && apt-get clean \
+    && sudo rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+RUN git clone https://github.com/openmeeg/openmeeg.git \
+    && cd /openmeeg \
+    && mkdir build \
+    && cd build \
+    && cmake -DCMAKE_BUILD_TYPE=Release -DUSE_PROGRESSBAR=ON -DBLA_VENDOR=OpenBLAS -DENABLE_PYTHON=ON .. \
+    && make \
+    && make test \
+    && make install \
+    && cd ../.. && rm -rf cppcheck*
+
+ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:/usr/local/lib/"
+
+CMD [ "bash"]
+#alias om_assemble='docker run harmening/openmeeg:msm om_assemble'
