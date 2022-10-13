@@ -1,8 +1,10 @@
-FROM python:3.6-slim
+#FROM python:3.6-slim
 #FROM python:3.7-slim
 #FROM python:3.8-slim
 #FROM python:3.9-slim
-#FROM python:3.10-slim
+FROM python:3.10-slim
+
+WORKDIR /
 
 # install c-libraries and other dependencies
 RUN apt-get update && apt-get install -qq -y \
@@ -61,7 +63,7 @@ RUN apt-get update && apt-get install -qq -y \
         swig \
         git \
         sudo \
-    && pip install \
+    && pip3 install \
         numpy \
         scipy \
         sparse \
@@ -143,6 +145,7 @@ RUN git config --global http.sslverify false \
       make install; \
     done; 
 
+# install duneuro
 RUN echo 'CMAKE_FLAGS="\
           -G \"Unix Makefiles\" \
           -DCMAKE_CXX_FLAGS=\"-fPIC -Og -g -Wall -Wextra -Wno-unused-parameter -Wno-unused-local-typedefs -std=c++14 -pthread -march=native -Wdelete-non-virtual-dtor\" \
@@ -154,16 +157,12 @@ RUN echo 'CMAKE_FLAGS="\
           " MAKE_FLAGS="-j2"' > /duneuro/dune-common/config_release.opts \
     && /duneuro/dune-common/bin/dunecontrol --opts=/duneuro/dune-common/config_release.opts --builddir=/duneuro/build-release all
 
-# clone and compile openmeeg
-RUN cd / \
-		&& GIT_URL="https://github.com/openmeeg/openmeeg/archive/30b8ee5322863b56f12ce790c8a04852a4594be0.zip" \
-    && wget -P ./ $GIT_URL \
-    && unzip ./30b8ee5322863b56f12ce790c8a04852a4594be0.zip -d / \
-    && mv /openmeeg-30b8ee5322863b56f12ce790c8a04852a4594be0 /openmeeg \
-    && rm ./30b8ee5322863b56f12ce790c8a04852a4594be0.zip \
-# Correct c++ runtime error (applies only to 30b8ee5322863b56f12ce790c8a04852a4594be0)
-    && sed -i '/transmat.set(0.0);/c\        for (int i=0; i<geo.size(); i++)  {for (int j=0; j<geo.size(); j++) {transmat(i,j) = 0.0;}}' /openmeeg/OpenMEEG/src/assembleSourceMat.cpp \
+
+# install openmeeg
+RUN git clone https://github.com/openmeeg/openmeeg.git \
     && cd /openmeeg \
+    && git fetch --all --tags --prune \ 
+    && git checkout tags/2.5.5 -b v2.5.5-branch \
     && mkdir build \
     && cd build \
     && cmake -DCMAKE_BUILD_TYPE=Release -DUSE_PROGRESSBAR=ON -DBLA_VENDOR=OpenBLAS -DENABLE_PYTHON=ON -DCMAKE_CXX_FLAGS="-Wno-narrowing -Wno-unused-local-typedefs -fpermissive -std=c++14" .. \
@@ -172,17 +171,16 @@ RUN cd / \
     && make install \
     && cd ../.. && rm -rf cppcheck*
 
+
 ENV PYTHONPATH "${PYTHONPATH}:/duneuro/build-release/duneuro-py/src/"
 ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:/usr/local/lib/"
 
-WORKDIR /
-
-ADD . /
 
 # Install pyhemo and run tests
-RUN python setup.py develop \
+RUN git clone https://github.com/harmening/pyhemo.git \
+    && cd /pyhemo \
+    && python setup.py develop \
     && pytest tests
-
 
 
 CMD ["python"]

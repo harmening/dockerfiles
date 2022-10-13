@@ -1,10 +1,10 @@
-### dockerfiles
+# dockerfiles
 
 Collection of various Dockerfiles for images I regularly use.
 They live on dockerhub under [harmening](https://hub.docker.com/u/harmening/).
 
 
-### singularity
+### conversion to singularity
 ```bash
 docker save d507db60d71e -o openmeeg.tar 
 singularity build openmeeg.sif docker-archive://openmeeg.tar 
