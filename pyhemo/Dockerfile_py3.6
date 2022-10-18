@@ -1,7 +1,8 @@
-#FROM python:3.7-slim AS compile-image
-#FROM python:3.8-slim AS compile-image
-#FROM python:3.9-slim AS compile-image
-FROM python:3.10-slim AS compile-image
+FROM python:3.6-slim
+#FROM python:3.7-slim
+#FROM python:3.8-slim
+#FROM python:3.9-slim
+#FROM python:3.10-slim
 
 WORKDIR /
 
@@ -13,12 +14,20 @@ RUN apt-get update && apt-get install -qq -y \
         gcc \
         g++ \
         gfortran \
+        libopenmpi-dev \
         openmpi-bin \
         openmpi-common \
         openssh-client \ 
         openssh-server \
         libeigen3-dev \
+        libopenblas-dev \
+        liblapacke-dev \
         libsuperlu-dev \
+        libhdf5-serial-dev \
+        libopenblas-dev \
+        liblapacke-dev \
+        libhdf5-serial-dev \
+        libmatio-dev \
         libgts-dev \
         libgts-0.7-5 \
         libc6 \
@@ -28,6 +37,7 @@ RUN apt-get update && apt-get install -qq -y \
         libfreetype6-dev\
         libxml2-dev \
         libxslt1-dev \
+        python-dev \
         libmpfr-dev \
         libboost-dev \
         libboost-atomic-dev \
@@ -36,6 +46,7 @@ RUN apt-get update && apt-get install -qq -y \
         libboost-system-dev \
         libboost-thread-dev \
         libeigen3-dev \
+        libcgal-dev \
         libgmp-dev \
         libgmpxx4ldbl \
         libtbb-dev \
@@ -44,17 +55,23 @@ RUN apt-get update && apt-get install -qq -y \
         unzip \
         tar \
         csh \
-    && python -m venv /opt/venv \
+        vim \
     && apt-get install -y make \
         -y cmake \
-        -y python3-dev \
+        python3-pip \
+        swig \
         git \
         sudo \
+    && rm -rf /usr/bin/python3.9* \
+    && rm -rf /usr/local/lib/python3.9 \
+    && python3.6 -m pip install \
+        numpy \
+        scipy \
+        h5py \
+        pytest \
     && apt-get clean \
     && sudo rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
     
-# Install python modules in virtualenv:
-ENV PATH="/opt/venv/bin:$PATH"
 
 # clone duneuro
 RUN git config --global http.sslverify false \ 
@@ -142,33 +159,30 @@ RUN echo 'CMAKE_FLAGS="\
 
 
 # install openmeeg
-RUN pip3 install \
-        numpy \
-        openmeeg==2.5.5
+RUN git clone https://github.com/openmeeg/openmeeg.git \
+    && cd /openmeeg \
+    && git fetch --all --tags --prune \ 
+    && git checkout tags/2.5.5 -b v2.5.5-branch \
+    && mkdir build \
+    && cd build \
+    && cmake -DCMAKE_BUILD_TYPE=Release -DUSE_PROGRESSBAR=ON -DBLA_VENDOR=OpenBLAS -DENABLE_PYTHON=ON -DCMAKE_CXX_FLAGS="-Wno-narrowing -Wno-unused-local-typedefs -fpermissive -std=c++14" .. \
+    && make \
+    && make test \
+    && make install \
+    && cd ../.. && rm -rf cppcheck*
 
 
-#FROM python:3.7-slim AS build-image
-#FROM python:3.8-slim AS build-image
-#FROM python:3.9-slim AS build-image
-FROM python:3.10-slim AS build-image
-WORKDIR /
-
-COPY --from=compile-image /opt/venv /opt/venv
-COPY --from=compile-image /usr/lib/x86_64-linux-gnu/* /usr/lib/x86_64-linux-gnu/ 
-COPY --from=compile-image /duneuro/build-release/duneuro-py/src /duneuro_src
-
-ENV PATH="/opt/venv/bin:$PATH"
-ENV PYTHONPATH "${PYTHONPATH}:/duneuro_src/"
+ENV PYTHONPATH "${PYTHONPATH}:/duneuro/build-release/duneuro-py/src/"
 ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:/usr/local/lib/"
+
 
 ADD . /pyhemo
 
 # Install pyhemo and run tests
 RUN apt-get update && apt-get install -qq -y vim \
     && cd /pyhemo \
-    && pip3 install -r requirements.txt \
     && python setup.py develop \
     && pytest tests
- 
+
 
 CMD ["python"]
