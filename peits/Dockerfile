@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM ubuntu:16.04 as compile-image
 
 ENV LD_LIBRARY_PATH /usr/local/lib
 WORKDIR /build
@@ -51,16 +51,26 @@ RUN cd /build && \
     bash ./INSTALL
 
 
+
+#FROM ubuntu:16.04 as build-image
+WORKDIR /build/PEITS/src
+
+#COPY --from=compile-image /build/ /build/
+#COPY --from=compile-image /usr/lib/ /usr/lib/
+
+
 # Create User and set environment
 RUN useradd -ms /bin/bash peitsier
-RUN chown -R peitsier:peitsier /build/PEITS
+RUN chown -R peitsier:peitsier /build/PEITS && \
+    echo "mpirun -np $(nproc) dune_peits; exit" >> /build/PEITS/src/start.sh
+
 USER peitsier
 
 ## Test PEITS
 #RUN cd /build/PEITS/tests && \
 #    bash ./initial_test.sh
 
-CMD ["bash"]
+CMD ["bash", "start.sh"]
 
 # cd /build/PEITS/src
 # mpirun -np 2 ./dune_peits
