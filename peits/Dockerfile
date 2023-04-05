@@ -3,6 +3,8 @@ FROM ubuntu:16.04 as compile-image
 ENV LD_LIBRARY_PATH /usr/local/lib
 WORKDIR /build
 
+USER root
+
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && apt-get install -y "$@" \
         build-essential software-properties-common \
@@ -62,7 +64,7 @@ WORKDIR /build/PEITS/src
 # Create User and set environment
 RUN useradd -ms /bin/bash peitsier
 RUN chown -R peitsier:peitsier /build/PEITS && \
-    echo "mpirun -np $(nproc) dune_peits; exit" >> /build/PEITS/src/start.sh
+    echo "chown -R peitsier /build/PEITS/data; su -c 'mpirun -np $(nproc) dune_peits; exit;' peitsier; exit;" >> /build/PEITS/src/start.sh
 
 USER peitsier
 
